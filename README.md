@@ -1,7 +1,6 @@
 # Yonghui-retail-analysis
 Yonghui retail data analysis｜SQL+Tableau program，compared to Pang donglai business model
 # 零售企业经营分析｜永辉超市商业模式失效探究（对标胖东来）
-> SQL + Tableau 课程实战项目，可用于求职作品集
 
 ## 📌项目背景
 永辉曾经依靠生鲜低价模式成为国内头部商超企业，近年营收持续下滑、连续亏损。
