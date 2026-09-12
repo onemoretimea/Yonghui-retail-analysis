@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>永辉超市经营分析看板 · Yonghui Retail Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif; background:#f0f2f5; color:#263238; }
+  .topbar { background:linear-gradient(120deg,#0d3b66,#1d5c8f); color:#fff; padding:18px 28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+  .topbar h1 { font-size:20px; font-weight:600; letter-spacing:1px; }
+  .topbar .sub { font-size:12px; opacity:.75; margin-top:4px; }
+  .tabs { display:flex; gap:6px; padding:10px 28px 0 28px; background:#e8ebf0; flex-wrap:wrap; }
+  .tab { padding:9px 18px; font-size:13px; cursor:pointer; border-radius:8px 8px 0 0; background:#d5dae2; color:#37474f; user-select:none; transition:.15s; }
+  .tab:hover { background:#c3cbd6; }
+  .tab.active { background:#fff; color:#0d3b66; font-weight:600; box-shadow:0 -2px 6px rgba(0,0,0,.08); }
+  .page { display:none; padding:18px 28px 30px; }
+  .page.active { display:block; }
+  .kpis { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .kpi { flex:1; min-width:170px; background:#fff; border-radius:10px; padding:14px 18px; box-shadow:0 1px 4px rgba(13,59,102,.08); border-top:3px solid #1d5c8f; }
+  .kpi .lab { font-size:12px; color:#78909c; margin-bottom:6px; }
+  .kpi .val { font-size:26px; font-weight:700; color:#0d3b66; }
+  .kpi .delta { font-size:12px; margin-top:4px; }
+  .up { color:#c62828; } .down { color:#2e7d32; } .flat { color:#78909c; }
+  .grid { display:grid; gap:16px; }
+  .card { background:#fff; border-radius:10px; padding:14px 16px 8px; box-shadow:0 1px 4px rgba(13,59,102,.08); }
+  .card h3 { font-size:14px; color:#0d3b66; margin-bottom:2px; }
+  .card .note { font-size:11.5px; color:#90a4ae; margin-bottom:6px; }
+  .chart { width:100%; }
+  .insight { background:#fff8e1; border-left:4px solid #f9a825; border-radius:6px; padding:10px 14px; font-size:12.5px; line-height:1.7; margin-top:14px; color:#5d4037; }
+  .footer { text-align:center; font-size:11px; color:#90a4ae; padding:16px; line-height:1.8; }
+  .g2 { grid-template-columns:1fr 1fr; } .g3 { grid-template-columns:1fr 1fr 1fr; }
+  @media (max-width:1000px){ .g2,.g3 { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <h1>永辉超市（601933）经营分析看板</h1>
+    <div class="sub">商业模式失效探究 · 对标胖东来 ｜ SQL(MySQL) + Tableau 项目 · 数据区间 2019-2025</div>
+  </div>
+  <div style="font-size:12px; opacity:.8; text-align:right;">
+    数据源：永辉年报 / 2025三季报 / 胖东来公开披露 / CSMAR 股价数据
+  </div>
+</div>
+<div class="tabs">
+  <div class="tab active" data-p="p0">① 总览 Overview</div>
+  <div class="tab" data-p="p1">② 营收拆解 Revenue</div>
+  <div class="tab" data-p="p2">③ 盈利结构 Profitability</div>
+  <div class="tab" data-p="p3">④ 单店与运营 Store Ops</div>
+  <div class="tab" data-p="p4">⑤ 区域与对标 Benchmark</div>
+  <div class="tab" data-p="p5">⑥ 市场视角 Market</div>
+</div>
+
+<!-- ============ P0 总览 ============ -->
+<div class="page active" id="p0">
+  <div class="kpis">
+    <div class="kpi"><div class="lab">2024 营业总收入</div><div class="val">675.7 亿</div><div class="delta down">▼ 同比 -14.1%（连续第4年下滑）</div></div>
+    <div class="kpi"><div class="lab">2024 归母净利润</div><div class="val">-14.65 亿</div><div class="delta down">连续第4年亏损（累计亏损约95亿）</div></div>
+    <div class="kpi"><div class="lab">2024 年末门店数</div><div class="val">775 家</div><div class="delta down">▼ 全年净关店 225 家</div></div>
+    <div class="kpi"><div class="lab">2024 同店效应</div><div class="val">+66.3 亿</div><div class="delta up">▲ 留存门店单店产出首次大幅修复</div></div>
+    <div class="kpi"><div class="lab">2024 毛利率</div><div class="val">20.46%</div><div class="delta flat">基本稳定（18.7%~21.6% 区间）</div></div>
+    <div class="kpi"><div class="lab">对标：胖东来单店产出</div><div class="val">≈10×</div><div class="delta flat">8.57亿/店 vs 永辉0.87亿/店</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>营收与门店规模：扩张见顶 → 战略收缩</h3><div class="note">柱=营收（亿元，左轴）｜线=年末门店数（右轴）</div><div class="chart" id="c01" style="height:300px"></div></div>
+    <div class="card"><h3>核心问题：营收下滑是关店还是同店恶化？</h3><div class="note">营收变化拆解（亿元）</div><div class="chart" id="c02" style="height:300px"></div></div>
+  </div>
+  <div class="insight">
+    <b>一句话结论：</b>2020-2023 的营收下滑主要由<b>同店效应持续为负</b>驱动（存量门店经营能力恶化），门店数效应只是次要因素；
+    2024 年大幅关店 225 家后，<b>同店效应转正（+66.3亿）</b>——公司从"规模换增长"切换到"质量换生存"。毛利率全程稳定在 19%-21%，
+    亏损根源不在卖货毛利，而在<b>收入收缩下的费用刚性（负经营杠杆）</b>。
+  </div>
+</div>
+
+<!-- ============ P1 营收拆解 ============ -->
+<div class="page" id="p1">
+  <div class="grid g2">
+    <div class="card"><h3>营收与门店双轴</h3><div class="note">亿元 / 家</div><div class="chart" id="c11" style="height:320px"></div></div>
+    <div class="card"><h3>同店效应 vs 门店数效应（并排条形）</h3><div class="note">ΔRev = 门店数效应 + 同店效应 ｜ 红=正贡献 绿=负贡献</div><div class="chart" id="c12" style="height:320px"></div></div>
+    <div class="card"><h3>营收变化瀑布式拆解</h3><div class="note">从上年营收到本年营收的路径（亿元）</div><div class="chart" id="c13" style="height:320px"></div></div>
+    <div class="card"><h3>拆解过程表（SQL 窗口函数产出）</h3><div class="note">假定营收 = 上年单店产出 × 本年门店数</div><div class="chart" id="c14" style="height:320px; overflow:auto"></div></div>
+  </div>
+  <div class="insight">
+    <b>两个阶段：</b>① <b>侵蚀期 2020-2023</b>——2020 年新店拉动 +98.8 亿掩盖同店 -15.5 亿；2021、2023 同店效应 -58.0 亿 / -85.6 亿是下滑主因；
+    ② <b>战略收缩期 2024</b>——关店 225 家带来 -177.0 亿门店数效应，但同店效应 +66.3 亿转正，留存门店单店营收回升至 8,719 万元（2023 仅 7,864 万元）。
+  </div>
+</div>
+
+<!-- ============ P2 盈利结构 ============ -->
+<div class="page" id="p2">
+  <div class="grid g2">
+    <div class="card"><h3>盈利剪刀差：毛利率稳定 vs 净利率塌陷</h3><div class="note">%（红线=毛利率，绿线=净利率，灰虚线=三费费用率）</div><div class="chart" id="c21" style="height:300px"></div></div>
+    <div class="card"><h3>三费费用率：收入收缩下的刚性爬升</h3><div class="note">%｜销售/管理/财务费用率</div><div class="chart" id="c22" style="height:300px"></div></div>
+    <div class="card"><h3>2024：毛利被费用完全吞噬</h3><div class="note">亿元｜毛利138.2 → 费用159.9 → 净亏损</div><div class="chart" id="c23" style="height:300px"></div></div>
+    <div class="card"><h3>转型期季度追踪（2024Q1-2025Q3）</h3><div class="note">亿元｜柱=营收，红绿点=净利</div><div class="chart" id="c24" style="height:300px"></div></div>
+  </div>
+  <div class="insight">
+    <b>剪刀差机制：</b>毛利率 5 年稳定（2021 低点 18.7%），但净利率 2021 跌至 -4.33%——租赁、折旧、人工等固定成本无法随收入等比收缩，
+    形成<b>负经营杠杆</b>。2024 静态拆解：毛利 138.2 亿 &lt; 三费合计 159.9 亿，毛利被完全吞噬。
+    转型期（2024-2025）营收降幅收窄但亏损仍在：2025Q1 受益春节+资产处置短暂盈利，Q2-Q3 重新转亏，2025 前三季度归母 -7.1 亿。
+  </div>
+</div>
+
+<!-- ============ P3 单店与运营 ============ -->
+<div class="page" id="p3">
+  <div class="grid g3">
+    <div class="card"><h3>单店营收（万元/店）</h3><div class="note">营收 ÷ 年末门店数</div><div class="chart" id="c31" style="height:280px"></div></div>
+    <div class="card"><h3>单店归母净利（万元/店）</h3><div class="note">2020 +176万 → 2021 起转负</div><div class="chart" id="c32" style="height:280px"></div></div>
+    <div class="card"><h3>生鲜库存周转天数</h3><div class="note">365×平均存货÷营业成本｜警戒线50天</div><div class="chart" id="c33" style="height:280px"></div></div>
+  </div>
+  <div class="insight">
+    <b>运营短板：</b>① 单店营收 2020 年 9,166 万一路降至 2023 年 7,864 万，2024 关店后回升至 8,719 万——但单店净利仍为 -189 万，未回到盈亏平衡；
+    ② 生鲜模式库存周转天数长期 &gt;50 天（2023 峰值 55.2 天），高损耗 + 资金占用持续侵蚀毛利；③ 扩张期门店数×70倍于胖东来，
+    却未形成规模经济，反而稀释单店质量。
+  </div>
+</div>
+
+<!-- ============ P4 区域与对标 ============ -->
+<div class="page" id="p4">
+  <div class="grid g2">
+    <div class="card"><h3>区域营收占比 vs 毛利率（2024）</h3><div class="note">气泡大小=区域营收｜高营收区域无毛利溢价</div><div class="chart" id="c41" style="height:310px"></div></div>
+    <div class="card"><h3>区域营收结构演变</h3><div class="note">百分比堆叠（2020-2024）</div><div class="chart" id="c42" style="height:310px"></div></div>
+    <div class="card"><h3>永辉 vs 胖东来：单店产出（亿元/店）</h3><div class="note">2024：胖东来 8.57 vs 永辉 0.87</div><div class="chart" id="c43" style="height:300px"></div></div>
+    <div class="card"><h3>永辉 vs 胖东来：净利率对比</h3><div class="note">%｜胖东来稳态盈利 vs 永辉持续为负</div><div class="chart" id="c44" style="height:300px"></div></div>
+  </div>
+  <div class="insight">
+    <b>对标启示：</b>区域上，华西+西南贡献约 35% 营收但毛利率（~15.9%）反而低于华北（18.2%）——<b>高营收≠高毛利，规模优势未兑现</b>。
+    胖东来用 14 家店做出 120 亿销售额、8.75% 净利率：区域深耕（供应链本地化 80%）+ 员工激励（月薪 9,886 元、流失率仅 5%、年假约 140 天）
+    + 用户粘性形成正循环；永辉早期"重规模、轻单店质量"的全国扩张路径，正是两者分野的根源。
+  </div>
+</div>
+
+<!-- ============ P5 市场视角 ============ -->
+<div class="page" id="p5">
+  <div class="grid">
+    <div class="card"><h3>601933 月收盘价与累计收益（2019-01 ~ 2025-10）</h3><div class="note">CSMAR TRD_Mnth｜蓝线=月收盘价（左轴），面积=累计收益率%（右轴，基期2019-01）｜虚线标注转型事件</div><div class="chart" id="c51" style="height:360px"></div></div>
+    <div class="grid g2">
+      <div class="card"><h3>基本面 vs 股价：市场先于业绩定价"模式失效"</h3><div class="note">柱=营收同比%（左），线=股价年度涨跌幅%（右）</div><div class="chart" id="c52" style="height:300px"></div></div>
+      <div class="card"><h3>2024 转型事件的市场反应</h3><div class="note">事件日及其后短窗口表现</div><div class="chart" id="c53" style="height:300px"></div></div>
+    </div>
+  </div>
+  <div class="insight">
+    <b>市场视角（CSMAR 数据实测）：</b>月收盘价从 2020 年高点约 10.9 元回落至 2025-10 的 4.67 元（回撤约 57%），市场在业绩塌陷前已对"规模模式失效"定价；
+    2021 年股价 -43.6% 与当年首亏相互印证。<b>2024 年是分水岭：全年上涨 +124.8%</b>——
+    2024-05-31 宣布学习胖东来调改后短窗口 +6.7%，2024-09-23 名创优品 62.7 亿入主 29.4% 股权后 [-1,+7] 窗口大涨 +61.3%（连续涨停），
+    资本市场用真金白银认可"质量转型"叙事，与 2025 年前三季度同店累计转正的经营信号互相印证。
+  </div>
+</div>
+
+<div class="footer">
+  Yonghui-retail-analysis · SQL(MySQL) + Tableau 课程项目 ｜ 本页为 Tableau 仪表盘的交互式预览（复刻效果），搭建步骤见 tableau_build_guide.md<br>
+  口径说明：营收=营业总收入；同店拆解采用年末门店数口径；区域面板 2024 为年报披露值、早年为结构回溯估算；胖东来为非上市公司公开披露数据
+</div>
+
+<script>
+const D = {"years": [2019, 2020, 2021, 2022, 2023, 2024], "revYi": [848.77, 931.99, 910.62, 900.91, 786.42, 675.74], "npYi": [15.15, 17.94, -39.44, -27.63, -13.29, -14.65], "gm": [21.56, 21.37, 18.71, 19.68, 21.23, 20.46], "nm": [1.78, 1.93, -4.33, -3.07, -1.69, -2.17], "stores": [911, 1017, 1057, 1033, 1000, 775], "opexPct": [19.02, 19.27, 22.33, 21.57, 22.75, 23.66], "sellPct": [16.24, 16.57, 18.26, 17.59, 18.67, 19.33], "admPct": [2.37, 2.46, 2.37, 2.27, 2.4, 2.65], "finPct": [0.41, 0.24, 1.7, 1.71, 1.68, 1.68], "ssd": [{"year": 2020, "label": "2019→2020", "dRev": 83.22, "storeEffect": 98.76, "sameStore": -15.54, "storeChg": 106}, {"year": 2021, "label": "2020→2021", "dRev": -21.37, "storeEffect": 36.66, "sameStore": -58.03, "storeChg": 40}, {"year": 2022, "label": "2021→2022", "dRev": -9.71, "storeEffect": -20.68, "sameStore": 10.97, "storeChg": -24}, {"year": 2023, "label": "2022→2023", "dRev": -114.49, "storeEffect": -28.78, "sameStore": -85.71, "storeChg": -33}, {"year": 2024, "label": "2023→2024", "dRev": -110.68, "storeEffect": -176.94, "sameStore": 66.26, "storeChg": -225}], "psRev": [9316.9, 9164.1, 8615.1, 8721.3, 7864.2, 8719.2], "psNp": [166.3, 176.4, -373.1, -267.5, -132.9, -189.1], "invDays": [null, 57.8, 53.4, 53.6, 55.2, 52.1], "region": [{"region": "华西", "rev": 123.32, "share": 18.25, "gm": 15.9}, {"region": "西南", "rev": 117.65, "share": 17.41, "gm": 15.8}, {"region": "华东", "rev": 106.9, "share": 15.82, "gm": 16.6}, {"region": "华北", "rev": 101.97, "share": 15.09, "gm": 18.2}, {"region": "华中", "rev": 52.1, "share": 7.71, "gm": 17.8}, {"region": "华南", "rev": 28.85, "share": 4.27, "gm": 19.2}], "regionYears": {"2020": [{"region": "华西", "rev": 172.42, "gm": 17.2}, {"region": "西南", "rev": 153.78, "gm": 17.0}, {"region": "华东", "rev": 158.44, "gm": 16.8}, {"region": "华北", "rev": 139.8, "gm": 18.0}, {"region": "华中", "rev": 79.22, "gm": 17.5}, {"region": "华南", "rev": 51.26, "gm": 18.8}], "2021": [{"region": "华西", "rev": 167.9, "gm": 16.88}, {"region": "西南", "rev": 152.32, "gm": 16.7}, {"region": "华东", "rev": 152.12, "gm": 16.75}, {"region": "华北", "rev": 136.8, "gm": 18.05}, {"region": "华中", "rev": 75.6, "gm": 17.57}, {"region": "华南", "rev": 47.28, "gm": 18.9}], "2022": [{"region": "华西", "rev": 165.54, "gm": 16.55}, {"region": "西南", "rev": 152.75, "gm": 16.4}, {"region": "华东", "rev": 147.84, "gm": 16.7}, {"region": "华北", "rev": 135.54, "gm": 18.1}, {"region": "华中", "rev": 73.02, "gm": 17.65}, {"region": "华南", "rev": 44.01, "gm": 19.0}], "2023": [{"region": "华西", "rev": 144.01, "gm": 16.23}, {"region": "西南", "rev": 135.13, "gm": 16.1}, {"region": "华东", "rev": 126.73, "gm": 16.65}, {"region": "华北", "rev": 118.49, "gm": 18.15}, {"region": "华中", "rev": 62.19, "gm": 17.72}, {"region": "华南", "rev": 36.0, "gm": 19.1}], "2024": [{"region": "华西", "rev": 123.32, "gm": 15.9}, {"region": "西南", "rev": 117.65, "gm": 15.8}, {"region": "华东", "rev": 106.9, "gm": 16.6}, {"region": "华北", "rev": 101.97, "gm": 18.2}, {"region": "华中", "rev": 52.1, "gm": 17.8}, {"region": "华南", "rev": 28.85, "gm": 19.2}]}, "qtr": [{"q": "2024Q1", "rev": 216.65, "np": 7.36, "yoy": null}, {"q": "2024Q2", "rev": 161.14, "np": -4.61, "yoy": null}, {"q": "2024Q3", "rev": 167.7, "np": -3.53, "yoy": null}, {"q": "2024Q4", "rev": 130.25, "np": -13.87, "yoy": null}, {"q": "2025Q1", "rev": 174.78, "np": 1.47, "yoy": -19.31}, {"q": "2025Q2", "rev": 124.7, "np": -3.88, "yoy": -22.62}, {"q": "2025Q3", "rev": 124.86, "np": -4.69, "yoy": -25.55}], "pdl": [{"year": 2020, "sales": 78.5, "np": 4.5, "stores": 12, "ps": 6.542, "nm": 5.73}, {"year": 2021, "sales": 85.2, "np": 5.2, "stores": 12, "ps": 7.1, "nm": 6.1}, {"year": 2022, "sales": 92.3, "np": 6.1, "stores": 13, "ps": 7.1, "nm": 6.61}, {"year": 2023, "sales": 105.0, "np": 8.2, "stores": 13, "ps": 8.077, "nm": 7.81}, {"year": 2024, "sales": 120.0, "np": 10.5, "stores": 14, "ps": 8.571, "nm": 8.75}], "yhPsRev": [0.932, 0.916, 0.862, 0.872, 0.786, 0.872], "yhNm": [1.78, 1.93, -4.33, -3.07, -1.69, -2.17], "yearRet": {"2019": -6.45, "2020": -4.77, "2021": -43.59, "2022": -9.88, "2023": -22.74, "2024": 124.82, "2025": -26.34}, "eventShort": [{"date": "2024-05-31", "label": "宣布学习胖东来模式启动门店调改", "shortRet": 6.67}, {"date": "2024-06-19", "label": "首家胖东来调改店（郑州信万广场店）开业", "shortRet": -7.09}, {"date": "2024-09-23", "label": "名创优品宣布62.7亿元收购永辉29.4%股权", "shortRet": 61.33}], "monDates": ["2019-01", "2019-02", "2019-03", "2019-04", "2019-05", "2019-06", "2019-07", "2019-08", "2019-09", "2019-10", "2019-11", "2019-12", "2020-01", "2020-02", "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08", "2020-09", "2020-10", "2020-11", "2020-12", "2021-01", "2021-02", "2021-03", "2021-04", "2021-05", "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10"], "monClose": [8.06, 8.65, 8.64, 9.77, 9.8, 10.21, 9.67, 9.85, 8.89, 8.34, 7.43, 7.54, 7.57, 8.6, 10.24, 10.16, 9.32, 9.38, 8.99, 8.88, 7.83, 7.81, 7.82, 7.18, 6.82, 7.21, 6.8, 5.57, 5.72, 4.73, 4.04, 3.81, 3.92, 3.93, 3.88, 4.05, 3.88, 3.65, 4.22, 4.43, 4.39, 4.28, 3.47, 3.41, 3.13, 2.98, 3.26, 3.65, 3.51, 3.43, 3.44, 3.42, 3.21, 3.13, 3.5, 3.22, 3.21, 3.08, 3.05, 2.82, 2.45, 2.64, 2.28, 2.43, 2.63, 2.48, 2.26, 2.34, 3.63, 4.61, 5.04, 6.34, 5.46, 5.33, 4.79, 5.16, 4.98, 4.9, 4.73, 5.18, 4.68, 4.67], "monCum": [0.0, 7.3, 7.2, 21.2, 21.6, 26.7, 20.0, 22.2, 10.3, 3.5, -7.8, -6.5, -6.1, 6.7, 27.0, 26.1, 15.6, 16.4, 11.5, 10.2, -2.9, -3.1, -3.0, -10.9, -15.4, -10.5, -15.6, -30.9, -29.0, -41.3, -49.9, -52.7, -51.4, -51.2, -51.9, -49.8, -51.9, -54.7, -47.6, -45.0, -45.5, -46.9, -56.9, -57.7, -61.2, -63.0, -59.6, -54.7, -56.5, -57.4, -57.3, -57.6, -60.2, -61.2, -56.6, -60.0, -60.2, -61.8, -62.2, -65.0, -69.6, -67.2, -71.7, -69.9, -67.4, -69.2, -72.0, -71.0, -55.0, -42.8, -37.5, -21.3, -32.3, -33.9, -40.6, -36.0, -38.2, -39.2, -41.3, -35.7, -41.9, -42.1], "events": [{"date": "2024-05-31", "label": "宣布学习胖东来模式启动门店调改"}, {"date": "2024-06-19", "label": "首家胖东来调改店（郑州信万广场店）开业"}, {"date": "2024-09-23", "label": "名创优品宣布62.7亿元收购永辉29.4%股权"}]};
+const UP = '#c62828', DOWN = '#2e7d32', BLUE = '#1d5c8f', GREY = '#b0bec5', ORANGE = '#ef6c00';
+const chart = id => echarts.init(document.getElementById(id));
+function baseOpt(o){ return Object.assign({tooltip:{trigger:'axis'},grid:{left:50,right:50,top:36,bottom:30,containLabel:true}}, o); }
+const yrs = D.years.map(String);
+
+// ---- P0 / P1 营收与门店
+function revStore(id){
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:yrs},
+    yAxis:[{type:'value',name:'亿元'},{type:'value',name:'门店数',splitLine:{show:false}}],
+    series:[
+      {name:'营收（亿元）',type:'bar',data:D.revYi,itemStyle:{color:BLUE},barWidth:'45%'},
+      {name:'年末门店数',type:'line',yAxisIndex:1,data:D.stores,itemStyle:{color:ORANGE},symbolSize:7}
+    ]
+  }));
+}
+// ---- P0/P1 同店拆解并排
+function ssBars(id){
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:D.ssd.map(d=>d.label)},
+    yAxis:{type:'value',name:'亿元'},
+    series:[
+      {name:'门店数效应',type:'bar',stack:'e',data:D.ssd.map(d=>d.storeEffect),
+       itemStyle:{color:c=>c.value>=0?'#78909c':'#90a4ae'}},
+      {name:'同店效应',type:'bar',stack:'e',data:D.ssd.map(d=>d.sameStore),
+       itemStyle:{color:c=>c.value>=0?UP:DOWN},label:{show:true,position:'top',formatter:p=>p.value}},
+      {name:'ΔRev（合计）',type:'line',data:D.ssd.map(d=>d.dRev),symbol:'diamond',symbolSize:9,itemStyle:{color:'#37474f'},lineStyle:{type:'dashed',width:2}}
+    ]
+  }));
+}
+// ---- P1 瀑布
+function ssWaterfall(id){
+  const cats=[],vals=[],pl=[],ph=[];
+  D.ssd.forEach(d=>{
+    cats.push(d.label); pl.push(null); ph.push(null); vals.push(null);
+  });
+  // simpler: build per year: prev rev -> store effect -> same store -> current rev
+  const cats2=[], base=[], delta=[];
+  D.ssd.forEach(d=>{
+    const prevRev = d.dRev - d.storeEffect - d.sameStore + d.dRev; // not used
+  });
+  // 用 2023->2024 一张瀑布讲清"战略收缩期"
+  const d = D.ssd[D.ssd.length-1];
+  const prevRev = 786.42, curRev = 675.74;
+  const items = [
+    {n:'2023营收', v:prevRev, type:'total'},
+    {n:'门店数效应', v:d.storeEffect, type:'delta'},
+    {n:'同店效应', v:d.sameStore, type:'delta'},
+    {n:'2024营收', v:curRev, type:'total'}
+  ];
+  let acc = 0; const data=[]; const cats3=[];
+  items.forEach(it=>{
+    cats3.push(it.n);
+    if(it.type==='total'){ data.push({value:it.v, itemStyle:{color:BLUE}}); acc = it.v; }
+    else {
+      const start = acc + Math.min(0, it.v);
+      data.push({value:Math.abs(it.v), itemStyle:{color: it.v>=0?UP:DOWN}});
+      acc += it.v;
+    }
+  });
+  chart(id).setOption(baseOpt({
+    xAxis:{type:'category',data:cats3},
+    yAxis:{type:'value',name:'亿元',min:550},
+    series:[{type:'bar',data:data,barWidth:'50%',label:{show:true,position:'top',
+      formatter:p=>{const it=items[p.dataIndex]; return it.type==='total'? it.v : (it.v>0?'+':'')+it.v;}}}]
+  }));
+}
+// ---- P1 拆解表
+function ssTable(id){
+  const rows = D.ssd.map(d=>`<tr><td>${d.label}</td><td>${d.storeChg>0?'+':''}${d.storeChg} 家</td><td class="${d.storeEffect>=0?'up':'down'}">${d.storeEffect>=0?'+':''}${d.storeEffect}</td><td class="${d.sameStore>=0?'up':'down'}">${d.sameStore>=0?'+':''}${d.sameStore}</td><td class="${d.dRev>=0?'up':'down'}">${d.dRev>=0?'+':''}${d.dRev}</td></tr>`).join('');
+  document.getElementById(id).innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+  <thead><tr style="background:#eceff1;color:#37474f"><th style="padding:7px">对比年份</th><th>门店净变化</th><th>门店数效应(亿)</th><th>同店效应(亿)</th><th>ΔRev(亿)</th></tr></thead>
+  <tbody>${rows}</tbody></table>`;
+}
+// ---- P2 剪刀差
+function scissors(id){
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:yrs},
+    yAxis:{type:'value',name:'%'},
+    series:[
+      {name:'毛利率',type:'line',data:D.gm,itemStyle:{color:UP},lineStyle:{width:3}},
+      {name:'净利率',type:'line',data:D.nm,itemStyle:{color:DOWN},lineStyle:{width:3},
+       areaStyle:{color:'rgba(46,125,50,.08)'}},
+      {name:'三费费用率',type:'line',data:D.opexPct,itemStyle:{color:GREY},lineStyle:{type:'dashed'}}
+    ]
+  }));
+}
+// ---- P2 三费
+function threeExp(id){
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:yrs},
+    yAxis:{type:'value',name:'%',max:22},
+    series:[
+      {name:'销售费用率',type:'bar',stack:'x',data:D.sellPct,itemStyle:{color:'#4a7ba6'}},
+      {name:'管理费用率',type:'bar',stack:'x',data:D.admPct,itemStyle:{color:'#8fb3d9'}},
+      {name:'财务费用率',type:'bar',stack:'x',data:D.finPct,itemStyle:{color:'#c5d6e8'},
+       label:{show:true,position:'top',color:'#37474f',formatter:p=>D.opexPct[p.dataIndex]}}
+    ]
+  }));
+}
+// ---- P2 2024吞噬瀑布
+function swallow(id){
+  const items=[
+    {n:'毛利', v:138.2},{n:'销售费用', v:-130.6},{n:'管理费用', v:-17.9},{n:'财务费用', v:-11.4},{n:'归母净利', v:-14.7}
+  ];
+  let acc=0; const data=[],cats=[];
+  items.forEach((it,i)=>{
+    cats.push(it.n);
+    if(i===0||i===items.length-1){ data.push({value:it.v,itemStyle:{color:i===0?'#4a7ba6':'#37474f'}}); acc=it.v; }
+    else { data.push({value:Math.abs(it.v),itemStyle:{color:DOWN}}); acc+=it.v; }
+  });
+  chart(id).setOption(baseOpt({
+    xAxis:{type:'category',data:cats},
+    yAxis:{type:'value',name:'亿元'},
+    series:[{type:'bar',data:data,barWidth:'50%',label:{show:true,position:'top',formatter:p=>items[p.dataIndex].v}}]
+  }));
+}
+// ---- P2 季度
+function quarterly(id){
+  const q=D.qtr;
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:q.map(x=>x.q)},
+    yAxis:[{type:'value',name:'营收(亿)'},{type:'value',name:'净利(亿)',splitLine:{show:false}}],
+    series:[
+      {name:'营收',type:'bar',data:q.map(x=>x.rev),itemStyle:{color:'#9fb8d0'},barWidth:'50%'},
+      {name:'归母净利',type:'line',yAxisIndex:1,data:q.map(x=>x.np),
+       itemStyle:{color:p=>p.value>=0?UP:DOWN},lineStyle:{color:'#607d8b',type:'dashed'},
+       symbolSize:9,label:{show:true,formatter:p=>p.value}}
+    ]
+  }));
+}
+// ---- P3 单店
+function perStore(id, field, name, colorFn){
+  chart(id).setOption(baseOpt({
+    xAxis:{type:'category',data:yrs},
+    yAxis:{type:'value',name:'万元/店'},
+    series:[{name:name,type:'bar',data:D[field],barWidth:'45%',
+      itemStyle:{color:colorFn},label:{show:true,position:'top'}}]
+  }));
+}
+function invDays(id){
+  chart(id).setOption(baseOpt({
+    xAxis:{type:'category',data:yrs.slice(1).map(String)},
+    yAxis:{type:'value',name:'天',min:40,max:60},
+    series:[{name:'库存周转天数',type:'line',data:D.invDays.slice(1),
+      itemStyle:{color:ORANGE},lineStyle:{width:3},symbolSize:9,
+      areaStyle:{color:'rgba(239,108,0,.10)'},label:{show:true,position:'top'},
+      markLine:{data:[{yAxis:50,name:'50天警戒线'}],lineStyle:{color:DOWN,type:'dashed'},label:{formatter:'50天警戒线'}}}]
+  }));
+}
+// ---- P4 区域气泡
+function regionBubble(id){
+  chart(id).setOption(baseOpt({
+    tooltip:{formatter:p=>`${p.data[3]}<br>营收占比 ${p.data[0]}%｜毛利率 ${p.data[1]}%<br>营收 ${p.data[2]} 亿元`},
+    xAxis:{type:'value',name:'营收占比 %',min:0,max:22},
+    yAxis:{type:'value',name:'毛利率 %',min:14,max:21},
+    series:[{type:'scatter',
+      data:D.region.map(r=>[r.share, r.gm, r.rev, r.region]),
+      symbolSize:v=>Math.sqrt(v[2])*3.2,
+      itemStyle:{color:'rgba(29,92,143,.55)',borderColor:BLUE,borderWidth:1},
+      label:{show:true,formatter:p=>p.data[3],position:'top'}
+    }],
+    markLine: undefined
+  }));
+}
+// ---- P4 区域堆叠
+function regionStack(id){
+  const regions=[...new Set(D.region.map(r=>r.region))];
+  const yrs2=Object.keys(D.regionYears).sort();
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:yrs2},
+    yAxis:[{type:'value',name:'亿元'},{type:'value',name:'合计占比%',max:100,splitLine:{show:false}}],
+    series: regions.map(r=>({
+      name:r,type:'bar',stack:'r',
+      data:yrs2.map(y=>{const f=D.regionYears[y].find(x=>x.region===r); return f?f.rev:0;}),
+      itemStyle:{color:{'华西':'#0d3b66','西南':'#1d5c8f','华东':'#4a7ba6','华北':'#8fb3d9','华中':'#c5d6e8','华南':'#ef6c00'}[r]}
+    }))
+  }));
+}
+// ---- P4 对标
+function vsPDL(id, field, yhField, name, unit){
+  const yrsP = D.pdl.map(p=>String(p.year));
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:yrsP},
+    yAxis:{type:'value',name:unit},
+    series:[
+      {name:'永辉超市',type:'bar',data:yrsP.map((y,i)=>D[yhField][D.years.indexOf(parseInt(y))]),
+       itemStyle:{color:BLUE},barWidth:'28%'},
+      {name:'胖东来',type:'bar',data:D.pdl.map(p=>p[field]),
+       itemStyle:{color:ORANGE},barWidth:'28%',label:{show:true,position:'top',formatter:p=>p.value}}
+    ]
+  }));
+}
+// ---- P5 月线
+function monthly(id){
+  const marks = D.events.map(e=>({xAxis:e.date.slice(0,7), name:e.label, label:{formatter:p=>p.name.slice(0,12), fontSize:10}}));
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:D.monDates},
+    yAxis:[{type:'value',name:'收盘价(元)',scale:true},{type:'value',name:'累计收益%',splitLine:{show:false}}],
+    dataZoom:[{type:'inside'},{type:'slider',height:16,bottom:2}],
+    series:[
+      {name:'月收盘价',type:'line',data:D.monClose,itemStyle:{color:BLUE},showSymbol:false,lineStyle:{width:2},
+       markLine:{data:marks,symbol:'none',lineStyle:{color:'#f9a825',type:'dashed'},label:{position:'insideEndTop'}}},
+      {name:'累计收益率%',type:'line',yAxisIndex:1,data:D.monCum,itemStyle:{color:GREY},showSymbol:false,
+       areaStyle:{color:'rgba(176,190,197,.15)'},lineStyle:{width:1}}
+    ]
+  }));
+}
+// ---- P5 基本面vs股价
+function fundMarket(id){
+  const revYoY = D.revYi.map((v,i)=>i===0?null:+( (v/D.revYi[i-1]-1)*100 ).toFixed(2));
+  const yrs3 = D.years.map(String);
+  chart(id).setOption(baseOpt({
+    legend:{top:4},
+    xAxis:{type:'category',data:yrs3},
+    yAxis:[{type:'value',name:'营收同比%'},{type:'value',name:'股价年度涨跌%',splitLine:{show:false}}],
+    series:[
+      {name:'营收同比%',type:'bar',data:revYoY,itemStyle:{color:p=>p.value>=0?'#9fb8d0':'#8fb3d9'},barWidth:'40%'},
+      {name:'股价年度涨跌%',type:'line',yAxisIndex:1,data:yrs3.map(y=>D.yearRet[y]??null),
+       itemStyle:{color:p=>p.value>=0?UP:DOWN},symbolSize:9}
+    ]
+  }));
+}
+// ---- P5 事件反应
+function eventReact(id){
+  chart(id).setOption({
+    tooltip:{formatter:p=>D.eventShort[p.dataIndex].label + '<br>[-1,+7] 窗口累计收益 ' + p.value + '%'},
+    grid:{left:60,right:30,top:30,bottom:40},
+    xAxis:{type:'category',data:D.eventShort.map(e=>e.date),axisLabel:{interval:0,rotate:15}},
+    yAxis:{type:'value',name:'[-1,+7]累计收益%'},
+    series:[{type:'bar',data:D.eventShort.map(e=>e.shortRet),itemStyle:{color:UP},barWidth:'35%',
+      label:{show:true,position:'top'}}]
+  });
+}
+
+revStore('c01'); ssBars('c02');
+revStore('c11'); ssBars('c12'); ssWaterfall('c13'); ssTable('c14');
+scissors('c21'); threeExp('c22'); swallow('c23'); quarterly('c24');
+perStore('c31','psRev','单店营收（万元/店）',p=>p.value>=9000?'#4a7ba6':'#1d5c8f');
+perStore('c32','psNp','单店净利（万元/店）',p=>p.value>=0?UP:DOWN);
+invDays('c33');
+regionBubble('c41'); regionStack('c42');
+vsPDL('c43','ps','yhPsRev','单店产出','亿元/店');
+vsPDL('c44','nm','yhNm','净利率','%');
+monthly('c51'); fundMarket('c52'); eventReact('c53');
+
+// tabs
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.p).classList.add('active');
+    window.dispatchEvent(new Event('resize'));
+  });
+});
+window.addEventListener('resize',()=>document.querySelectorAll('.chart').forEach(el=>{const c=echarts.getInstanceByDom(el);if(c&&el.offsetParent)c.resize();}));
+</script>
+</body>
+</html>

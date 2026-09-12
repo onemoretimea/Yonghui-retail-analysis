@@ -1,5 +1,7 @@
 # Yonghui-retail-analysis
 
+Yonghui retail data analysis｜SQL+Tableau program，compared to Pangdonglai business model
+
 零售企业经营分析｜永辉超市商业模式失效探究（对标胖东来）
 
 ## 📌项目背景
@@ -96,4 +98,3 @@
 
 **主要数据来源**：永辉超市历年年度报告（巨潮资讯/公司官网）、2025 年第三季度报告、
 腾讯自选股/东方财富财务数据接口（交叉核验）、胖东来官网销售数据及公开报道、CSMAR 数据库。
-
